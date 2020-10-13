@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .networks_other import init_weights
+from torchsrc.models.networks_other import init_weights
 
 
 class conv2DBatchNorm(nn.Module):

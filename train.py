@@ -413,28 +413,28 @@ network = 'UNet3D'
 
 
 # experiment 20
-exp_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/Experiment20'
-input_img_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResampleNormalize_Final_img'
-calcium_mask_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResample_Final_calcium'
-learning_rate = 0.0001   #default 0.0001
-res = [192,128,64]
-imsize = [192,128,64]
-sample_size = [128,128]
-sample_duration = 64
-batch_size = 2
-fcnum = 1536
-networkName =  'huo_net_conv1'  #'huo_net_direct' #''densenet121_twochanel'
-input_demographic_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-11-2018_madeByYuankai/FH_Export_CAC1_list_201807011.csv'
-input_demographic_CAC2_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-11-2018_madeByYuankai/FH_Export_CAC2_list_201807011.csv'
-test_calcium_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-23-2018_testAttentionYuankai/FH_Export_CAC1_list_2018_08_03.csv'
-new_img_root_dir = []
-add_calcium_mask = True
-data_augmentation = True
-dual_network = True
-use_siamese = True
-ValidateAttention = True
-siamese_coeiff = 0.001
-clss_num = 3
+# exp_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/Experiment20'
+# input_img_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResampleNormalize_Final_img'
+# calcium_mask_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResample_Final_calcium'
+# learning_rate = 0.0001   #default 0.0001
+# res = [192,128,64]
+# imsize = [192,128,64]
+# sample_size = [128,128]
+# sample_duration = 64
+# batch_size = 2
+# fcnum = 1536
+# networkName =  'huo_net_conv1'  #'huo_net_direct' #''densenet121_twochanel'
+# input_demographic_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-11-2018_madeByYuankai/FH_Export_CAC1_list_201807011.csv'
+# input_demographic_CAC2_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-11-2018_madeByYuankai/FH_Export_CAC2_list_201807011.csv'
+# test_calcium_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-23-2018_testAttentionYuankai/FH_Export_CAC1_list_2018_08_03.csv'
+# new_img_root_dir = []
+# add_calcium_mask = True
+# data_augmentation = True
+# dual_network = True
+# use_siamese = True
+# ValidateAttention = True
+# siamese_coeiff = 0.001
+# clss_num = 3
 
 
 #experiment 21
@@ -462,7 +462,6 @@ clss_num = 3
 # clss_num = 3
 
 
-
 # experiments22
 # exp_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/Experiment22'
 # input_img_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResampleNormalize_Final_img'
@@ -485,6 +484,30 @@ clss_num = 3
 # ValidateAttention = False
 # siamese_coeiff = 0.0001
 # clss_num = 3
+
+
+# experiments22_kaiwen
+exp_dir = '/nfs/masi/xuk9/SPORE/CAC_class/output/experiments22_yuankai'
+input_img_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResampleNormalize_Final_img'
+calcium_mask_dir = '/fs4/masi/huoy1/JeffFHSCT/Experiments/DataResample_Final_calcium'
+learning_rate = 0.0001   #default 0.0001
+res = [192,128,64]
+imsize = [192,128,64]
+sample_size = 128
+sample_duration = 64
+batch_size = 2
+fcnum = 1536
+networkName ='resnet101'
+input_demographic_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-11-2018_madeByYuankai/FH_Export_CAC1_and2_list_201807011.csv'
+input_demographic_CAC2_file = ' '
+test_calcium_CAC1_file = '/fs4/masi/huoy1/JeffFHSCT/demographic/07-23-2018_testAttentionYuankai/FH_Export_CAC1_list_201807011.csv'
+add_calcium_mask = True
+data_augmentation = True
+dual_network = False
+use_siamese = False
+ValidateAttention = False
+siamese_coeiff = 0.0001
+clss_num = 3
 
 
 # experiments23
@@ -542,24 +565,25 @@ test_dict['categories'] = test_cateegories
 
 
 # load image
+num_workers = 4
 if add_calcium_mask:
 	train_set = torchsrc.imgloaders.pytorch_loader_clss3D_calcium(train_dict, num_labels=clss_num,
 																  input_root_dir=input_img_dir,calcium_mask_dir=calcium_mask_dir,
 																  res=res, imsize=imsize,dual_network = dual_network,
 																  data_augmentation=data_augmentation)
-	train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=1)
+	train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 	test_set = torchsrc.imgloaders.pytorch_loader_clss3D_calcium(test_dict, num_labels=clss_num, input_root_dir=input_img_dir,calcium_mask_dir=calcium_mask_dir,
 																 res=res,
 																 imsize=imsize, data_augmentation=False)
-	test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=1)
+	test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 else:
 	train_set = torchsrc.imgloaders.pytorch_loader_clss3D(train_dict, num_labels=clss_num, input_root_dir=input_img_dir,
 														  res=res, imsize=imsize,dual_network = dual_network,data_augmentation=data_augmentation)
-	train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=1)
+	train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 	test_set = torchsrc.imgloaders.pytorch_loader_clss3D(test_dict, num_labels=clss_num, input_root_dir=input_img_dir, res=res,
 														 imsize=imsize,data_augmentation=False)
-	test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=1)
+	test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 # train_set = torchsrc.imgloaders.pytorch_loader_no255(train_dict,num_labels=lmk_num)
 # train_loader = torch.utils.data.DataLoader(train_set,batch_size=batch_size,shuffle=True,num_workers=1)

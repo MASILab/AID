@@ -3,7 +3,6 @@ import math
 import os
 import os.path as osp
 import shutil
-import cv2
 # import fcn
 import numpy as np
 import pytz
@@ -18,12 +17,10 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import tqdm
-from ContrastiveLoss import ContrastiveLoss
-import skimage
-import random
-from utils.image_pool import ImagePool
-from models.utils import HookBasedFeatureExtractor
-from grad_cam import (BackPropagation, Deconvolution, GradCAM, GuidedBackPropagation)
+from .ContrastiveLoss import ContrastiveLoss
+# from ContrastiveLoss import ContrastiveLoss
+from .models.utils import HookBasedFeatureExtractor
+from .grad_cam import (BackPropagation, Deconvolution, GradCAM, GuidedBackPropagation)
 from sklearn.metrics import f1_score,recall_score,precision_score,accuracy_score
 
 
@@ -687,7 +684,7 @@ class Trainer(object):
                         self.epoch, batch_idx, loss1.data[0], loss2.data[0], loss3.data[0], loss.data[0],correct, sofar,
                         100. * float(correct) / sofar, 100 * float(correct_binary) / sofar)
                 else:
-                    print_str = 'epoch=%d, batch_idx=%d, loss=%.4f, Accuracy: %d/%d (%.3f) binary (%.3f)\n' % (self.epoch, batch_idx, loss.data[0], correct, sofar,
+                    print_str = 'epoch=%d, batch_idx=%d, loss=%.4f, Accuracy: %d/%d (%.3f) binary (%.3f)\n' % (self.epoch, batch_idx, loss.data.item(), correct, sofar,
                         100. * float(correct) / sofar, 100 * float(correct_binary) / sofar)
                 print(print_str)
                 fv.write(print_str)

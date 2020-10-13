@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
-from layers.grid_attention_layer import GridAttentionBlock3D
-from networks_other import init_weights
+from torchsrc.models.grid_attention_layer import GridAttentionBlock3D
+from torchsrc.models.networks_other import init_weights
 import math
 
 __all__ = [

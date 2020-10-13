@@ -1,10 +1,5 @@
-import numpy as np
-import math
 import torch.nn as nn
-from .utils import unetConv2, unetUp, conv2DBatchNormRelu, conv2DBatchNorm, UnetConv3
-import torch
 import torch.nn.functional as F
-from layers.grid_attention_layer import _GridAttentionBlockND_TORR as AttentionBlock3D
 from networks_other import init_weights
 
 class huo_net_direct(nn.Module):
