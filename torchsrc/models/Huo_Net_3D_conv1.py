@@ -1,8 +1,8 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from grid_attention_layer import _GridAttentionBlockND_TORR as AttentionBlock3D
-from networks_other import init_weights
+from torchsrc.models.grid_attention_layer import _GridAttentionBlockND_TORR as AttentionBlock3D
+from torchsrc.models.networks_other import init_weights
 
 
 class huo_net_conv1(nn.Module):

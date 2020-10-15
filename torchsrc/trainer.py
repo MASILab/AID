@@ -17,14 +17,18 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import tqdm
-from .ContrastiveLoss import ContrastiveLoss
+from torchsrc.ContrastiveLoss import ContrastiveLoss
 # from ContrastiveLoss import ContrastiveLoss
-from .models.utils import HookBasedFeatureExtractor
-from .grad_cam import (BackPropagation, Deconvolution, GradCAM, GuidedBackPropagation)
-from sklearn.metrics import f1_score,recall_score,precision_score,accuracy_score
+from torchsrc.models.utils import HookBasedFeatureExtractor
+from torchsrc.grad_cam import (BackPropagation, Deconvolution, GradCAM, GuidedBackPropagation)
+from sklearn.metrics import f1_score,recall_score,precision_score,accuracy_score, roc_curve, roc_auc_score
+from torch.optim.lr_scheduler import StepLR
 
 
 import torchsrc
+
+def plot_roc(fpr, tpr, out_png):
+    pass
 
 def saveOneImg(img,path,cate_name,sub_name,surfix,):
     filename = "%s-x-%s-x-%s.png"%(cate_name,sub_name,surfix)
@@ -405,7 +409,7 @@ class Trainer(object):
                 train_loader=None,test_loader=None,lmk_num=None,
                 train_root_dir=None,out=None, max_epoch=None, batch_size=None,
                 size_average=False, interval_validate=None,dual_network = False,
-                add_calcium_mask=False,use_siamese = False,siamese_coeiff = 0.001):
+                add_calcium_mask=False,use_siamese = False,siamese_coeiff = 0.001, config=None):
         self.cuda = cuda
 
         self.model = model
@@ -437,6 +441,8 @@ class Trainer(object):
         self.add_calcium_mask = add_calcium_mask
         self.use_siamese = use_siamese
 
+        self.config = config
+
     def get_feature_maps(self, layer_name, upscale):
         feature_extractor = HookBasedFeatureExtractor(self.model, layer_name, upscale)
         return feature_extractor.forward(self.input)
@@ -461,8 +467,9 @@ class Trainer(object):
         pred_history=[]
         target_history=[]
         loss_history=[]
+        binary_label_history = []
+        binary_pred_prob_history = []
         sofar = 0
-
 
         for batch_idx, (data,target,sub_name) in tqdm.tqdm(
                 # enumerate(self.test_loader), total=len(self.test_loader),
@@ -516,7 +523,6 @@ class Trainer(object):
                 gcam.backward_del(idx=idx[i])
                 del gcam, output, nii_seg, probs
 
-
                 #training attention
                 subnum = data.size(0)
                 for subi in range(subnum):
@@ -561,14 +567,16 @@ class Trainer(object):
             for batch_num in range(data.size(0)):
             # test_loss /= len(self.test_loader)  # loss function already averages over batch size
                 results_strs = '[Epoch %04d] True=[%d],Pred=[%d],Pred_prob=%s,Test set: Average loss: %.4f, Accuracy: %d/%d (%.3f) binary (%.3f), subname=[%s]\n' % (
-                    self.epoch, target.data.cpu().numpy()[batch_num], pred.cpu().numpy()[batch_num], np.array2string(pred_clss[batch_num].data.cpu().numpy()), test_loss.data[0], correct, sofar,
+                    self.epoch, target.data.cpu().numpy()[batch_num], pred.cpu().numpy()[batch_num], np.array2string(pred_clss[batch_num].data.cpu().numpy()), test_loss.data.item(), correct, sofar,
                     100. * float(correct) / sofar, 100 * float(correct_binary) / sofar, sub_name[batch_num])
                 print(results_strs)
                 fv.write(results_strs)
 
-            loss_history.append(test_loss.data.cpu().numpy().tolist())
+            loss_history.append(test_loss.data.cpu().numpy().tolist() * data.size(0))
             pred_history += pred_binary.cpu().numpy().tolist()
             target_history += target_binary.data.cpu().numpy().tolist()
+            binary_label_history += target_binary.data.cpu().numpy().tolist()
+            binary_pred_prob_history += (1 - pred_clss.data.cpu().numpy()[:, 0]).tolist()
 
         f1 = f1_score(target_history, pred_history)
         recall = recall_score(target_history, pred_history)
@@ -583,6 +591,20 @@ class Trainer(object):
         fv2.close()
         fv3.close()
 
+        # ROC AUC
+        log_file4 = osp.join(out, 'test_auc.txt')
+        auc_score = roc_auc_score(binary_label_history, binary_pred_prob_history)
+        fv4 = open(log_file4, 'a')
+        fv4.write(f'{self.epoch} {auc_score:.3f}\n')
+        fv4.close()
+
+        # ROC AUC
+        epoch_averaged_loss = np.sum(np.array(loss_history)) / sofar
+        log_file5 = osp.join(out, 'test_epoch_loss.txt')
+        fv5 = open(log_file5, 'a')
+        fv5.write(f'{self.epoch} {epoch_averaged_loss:.3f}\n')
+        fv5.close()
+
     def train(self):
         self.model.train()
         out = osp.join(self.out, 'visualization')
@@ -595,6 +617,10 @@ class Trainer(object):
         correct = 0
         correct_binary = 0
         sofar = 0
+
+        epoch_averaged_loss_history = []
+        binary_pred_prob_history = []
+        binary_label_history = []
         for batch_idx, (data, target, sub_name) in tqdm.tqdm(
             enumerate(self.train_loader), total=len(self.train_loader),
                 desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
@@ -678,6 +704,10 @@ class Trainer(object):
             correct_binary += pred_binary.eq(target_binary).cpu().sum()
             total = (batch_idx+1)*self.batch_size
 
+            epoch_averaged_loss_history.append(loss.data.item() * data.size(0))
+            binary_label_history += target_binary.data.cpu().numpy().tolist()
+            binary_pred_prob_history += (1 - pred_clss.data.cpu().numpy()[:, 0]).tolist()
+
             if (batch_idx % 1 == 0):
                 if self.dual_network:
                     print_str = 'epoch=%d, batch_idx=%d, loss=%.4f+%.4f +%.4f= %.4f, Accuracy: %d/%d (%.3f) binary (%.3f)\n' % (
@@ -694,7 +724,28 @@ class Trainer(object):
         fv.close()
         fv2.close()
 
+        # AUC ROC
+        log_file3 = osp.join(out, 'train_auc.txt')
+        auc_score = roc_auc_score(binary_label_history, binary_pred_prob_history)
+        fv3 = open(log_file3, 'a')
+        fv3.write(f'{self.epoch} {auc_score:.3f}\n')
+        fv3.close()
+
+        # Averaged loss
+        epoch_averaged_loss = np.sum(np.array(epoch_averaged_loss_history)) / sofar
+        log_file4 = osp.join(out, 'train_epoch_loss.txt')
+        fv4 = open(log_file4, 'a')
+        fv4.write(f'{self.epoch} {epoch_averaged_loss:.3f}\n')
+        fv4.close()
+
     def train_epoch(self):
+        # Kaiwen add scheduler
+        p_lr_scheduler = ('lr_scheduler_step' in self.config)
+        lr_scheduler = None
+        if p_lr_scheduler:
+            lr_scheduler = StepLR(self.optim,
+                                  step_size=self.config['lr_scheduler_step'],
+                                  gamma=self.config['lr_scheduler_gamma'])
         for epoch in tqdm.trange(self.epoch, self.max_epoch,
                                  desc='Train', ncols=80):
             self.epoch = epoch
@@ -702,7 +753,6 @@ class Trainer(object):
             mkdir(out)
 
             model_pth = '%s/model_epoch_%04d.pth' % (out, epoch)
-
 
             if os.path.exists(model_pth):
                 if self.cuda:
@@ -718,6 +768,8 @@ class Trainer(object):
                 # if epoch % 5 == 0:
                 self.validate()
                 torch.save(self.model.state_dict(), model_pth)
+                if lr_scheduler:
+                    lr_scheduler.step()
 
                 # torch.save(self.model.state_dict(), model_pth)
 
